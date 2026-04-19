@@ -6,9 +6,9 @@ on:
       - main
   workflow_dispatch:   # Allow manual trigger from GitHub UI
 
-  # ── Scheduled auto-fetch: weekdays at 01:00 UTC (09:00 SGT) ──
+  # ── Scheduled auto-fetch: every Monday at 01:00 UTC (09:00 SGT) ──
   schedule:
-    - cron: '0 1 * * 1-5'
+    - cron: '0 1 * * 1'
 
 permissions:
   contents: write      # Needed to commit updated data + push gh-pages
