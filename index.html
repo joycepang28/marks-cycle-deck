@@ -1272,7 +1272,7 @@ function renderCards() {
           <span class="metric-value ${ytdClass}">${formatYTD(m.ytd)}</span>
         </div>
         <div class="metric">
-          <span class="metric-label">TTM PE</span>
+          <span class="metric-label">TTM PE${m.id === 'cn' ? '<sup style="font-size:8px;color:var(--text-faint);margin-left:2px;" title="中证指数公司官方TTM PE（总市值÷TTM盈利，动态法）">¹</sup>' : ''}</span>
           <span class="metric-value ${peClass === 'high' ? 'down' : peClass === 'low' ? 'up' : 'warn'}">${m.ttmPE.toFixed(1)}×</span>
         </div>
         <div class="metric">
@@ -1281,7 +1281,10 @@ function renderCards() {
         </div>
       </div>
       <div class="pe-compare">
-        <div class="pe-compare-title">PE 对比</div>
+        <div class="pe-compare-title">
+          PE 对比
+          ${m.id === 'cn' ? '<span style="margin-left:6px;font-size:9px;color:var(--text-faint);font-style:italic;">中证官方TTM · 方法：总市值÷盈利</span>' : ''}
+        </div>
         <div class="pe-compare-row">
           <div class="pe-compare-label current">当前</div>
           <div class="pe-compare-track">
@@ -1304,6 +1307,12 @@ function renderCards() {
           <div class="pe-compare-val hist">${m.pe10y ? m.pe10y.toFixed(1) + '×' : '—'}</div>
         </div>
       </div>
+      ${m.id === 'cn' ? `<div style="margin-top:6px;padding:5px 8px;background:var(--surface-2);border-radius:6px;border-left:2px solid var(--text-faint);">
+        <p style="margin:0;font-size:9px;color:var(--text-faint);line-height:1.5;">
+          <sup>¹</sup> <strong style="color:var(--text-muted);">PE口径</strong>：采用<strong style="color:var(--text-muted);">中证指数公司官方TTM PE</strong>（动态市盈率），计算方式为指数总市值 ÷ 成分股TTM净利润合计（汇总法）。当前32×。
+          另一常用口径：理杏仁市值加权PE（剔除亏损股）≈ 36×。两种口径均显著高于整体A股约10×。
+        </p>
+      </div>` : ''}
       <div class="card-footer">
         <span class="posture-label">建议姿态</span>
         <span class="posture-value s${m.stage}" onclick="openPosturePopup('${m.id}')">${m.postureLabel}</span>
