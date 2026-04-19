@@ -578,17 +578,17 @@
       white-space: nowrap;
     }
 
-    /* Volatility Index bar — HK/JP (reverse color: green=calm, red=panic) */
+    /* Volatility Index bar — HK/JP (inverted: high vix=left/red=panic, low vix=right/green=calm) */
     .vix-bar-track {
       position: relative;
       height: 8px;
       border-radius: 4px;
       background: linear-gradient(
         to right,
-        #3fb950 0%,
+        #f85149 0%,
         #d29922 40%,
         #d29922 60%,
-        #f85149 100%
+        #3fb950 100%
       );
       overflow: visible;
     }
@@ -609,6 +609,11 @@
     .vix-zone-neutral      { color: var(--text-muted); }
     .vix-zone-elevated     { color: #d29922; }
     .vix-zone-panic        { color: #f85149; }
+    /* Label colors for inverted vix bar: panic on left=red, calm on right=green */
+    .vix-lbl-panic         { color: #f85149; }
+    .vix-lbl-elevated      { color: #d29922; }
+    .vix-lbl-neutral       { color: var(--text-muted); }
+    .vix-lbl-calm          { color: #3fb950; }
 
     /* PE Comparison — unified 3-row bar chart */
     .pe-compare {
@@ -1415,18 +1420,18 @@ function renderCards() {
       <div class="fgi-bar-wrap">
         <div class="fgi-bar-header">
           <span class="fgi-bar-label">${m.id === 'hk' ? 'VHSI 波动率指数' : 'NKVI 波动率指数'}</span>
-          <span class="fgi-bar-range">低 10 — 高 60</span>
+          <span class="fgi-bar-range">恐慌 60 — 平静 10</span>
         </div>
         <div class="vix-bar-track">
-          <div class="vix-bar-marker" style="left:${Math.min(Math.max((m.vix - 10) / 50 * 100, 2), 96).toFixed(1)}%"></div>
+          <div class="vix-bar-marker" style="left:${(100 - Math.min(Math.max((m.vix - 10) / 50 * 100, 0), 100)).toFixed(1)}%"></div>
         </div>
         <div class="fgi-bar-labels">
-          <span class="vix-zone-calm">10 平静</span>
-          <span class="vix-zone-neutral">25 正常</span>
-          <span class="vix-zone-elevated">40 紧张</span>
-          <span class="vix-zone-panic">60 恐慌</span>
+          <span class="vix-lbl-panic">60 恐慌</span>
+          <span class="vix-lbl-elevated">40 紧张</span>
+          <span class="vix-lbl-neutral">25 正常</span>
+          <span class="vix-lbl-calm">10 平静</span>
         </div>
-        <div class="fgi-current-label" style="left:${Math.min(Math.max((m.vix - 10) / 50 * 100, 4), 92).toFixed(1)}%">当前 ${m.vix.toFixed(1)}</div>
+        <div class="fgi-current-label" style="left:${Math.min(Math.max(100 - Math.min(Math.max((m.vix - 10) / 50 * 100, 0), 100), 4), 92).toFixed(1)}%">当前 ${m.vix.toFixed(1)}</div>
       </div>` : ''}
       <div class="card-footer">
         <span class="posture-label">建议姿态</span>
