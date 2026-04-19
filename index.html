@@ -1709,13 +1709,42 @@ function drawPendulum() {
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Subtle center highlight
-  ctx.beginPath();
-  ctx.arc(cx, cy, R, Math.PI * 0.38, Math.PI * 0.62, false);
-  ctx.strokeStyle = isDark ? 'rgba(139,148,158,0.30)' : 'rgba(80,90,100,0.18)';
-  ctx.lineWidth = 5;
-  ctx.lineCap = 'round';
-  ctx.stroke();
+  // ── Stage zone shading on the arc (filled wedge between arc and pivot)
+  // Stage boundaries (angle×π):
+  //   Stage 1 (bull/green):    0.10 → 0.37  (dev < −10%)
+  //   Stage 2 (caution/amber): 0.37 → 0.90  (−10% ≤ dev < +30%)
+  //   Stage 3 (bear/red):      0.90 → 0.97  (dev ≥ +30%)
+  const zoneShades = [
+    { a0: Math.PI * 0.10, a1: Math.PI * 0.367, baseColor: isDark ? '63,185,80'   : '26,127,55'  },  // stage 1
+    { a0: Math.PI * 0.367, a1: Math.PI * 0.90,  baseColor: isDark ? '210,153,34'  : '154,103,0' },  // stage 2
+    { a0: Math.PI * 0.90, a1: Math.PI * 0.97,   baseColor: isDark ? '248,81,73'   : '207,34,46' },  // stage 3
+  ];
+  const ARC_BAND = Math.max(18, R * 0.13); // band width along the arc
+  zoneShades.forEach(z => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + ARC_BAND * 0.5, z.a0, z.a1, false);
+    ctx.arc(cx, cy, R - ARC_BAND * 0.5, z.a1, z.a0, true);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${z.baseColor}, ${isDark ? 0.22 : 0.15})`;
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Stage boundary tick marks
+  [Math.PI * 0.367, Math.PI * 0.90].forEach(a => {
+    const inner = R - ARC_BAND * 0.5 - 4;
+    const outer = R + ARC_BAND * 0.5 + 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx + inner * Math.cos(a), cy + inner * Math.sin(a));
+    ctx.lineTo(cx + outer * Math.cos(a), cy + outer * Math.sin(a));
+    ctx.strokeStyle = isDark ? 'rgba(139,148,158,0.5)' : 'rgba(80,90,100,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.restore();
+  });
 
   // ── Zone labels inside arc
   const zoneLabels = [
