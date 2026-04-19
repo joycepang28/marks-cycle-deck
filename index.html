@@ -1139,11 +1139,57 @@ const DEFAULT_DATA = {
 };
 
 // In-memory state (no storage APIs needed)
+const STORAGE_KEY = 'marksCycleDeck_v1';
+
 function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 合并：以DEFAULT_DATA结构为基础，覆盖已保存的markets和lastUpdated
+      const merged = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      if (parsed.updateDate) merged.updateDate = parsed.updateDate;
+      if (parsed.markets && Array.isArray(parsed.markets)) {
+        parsed.markets.forEach(savedMarket => {
+          const idx = merged.markets.findIndex(m => m.id === savedMarket.id);
+          if (idx !== -1) {
+            // 只覆盖数值字段，保留DEFAULT_DATA中的文字/结构字段
+            const numericFields = ['level','ytd','ttmPE','pe5y','pe10y','cape','fgi','stage'];
+            numericFields.forEach(f => {
+              if (savedMarket[f] !== undefined) merged.markets[idx][f] = savedMarket[f];
+            });
+          }
+        });
+      }
+      return merged;
+    }
+  } catch(e) {
+    console.warn('loadData error:', e);
+  }
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
+
 function saveToStorage(data) {
-  // data is already held in appData in-memory
+  try {
+    // 只存储数值数据和日期，不存储base64图片（太大）
+    const toSave = {
+      updateDate: data.updateDate,
+      markets: data.markets.map(m => ({
+        id: m.id,
+        level: m.level,
+        ytd: m.ytd,
+        ttmPE: m.ttmPE,
+        pe5y: m.pe5y,
+        pe10y: m.pe10y,
+        cape: m.cape,
+        fgi: m.fgi,
+        stage: m.stage,
+      }))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) {
+    console.warn('saveToStorage error:', e);
+  }
 }
 
 let appData = loadData();
