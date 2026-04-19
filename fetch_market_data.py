@@ -278,6 +278,61 @@ def fetch_sg_rsi():
     return None
 
 
+def fetch_my_rsi():
+    """Compute FBM KLCI RSI(14) as a Malaysia market sentiment proxy.
+    Uses Yahoo Finance ^KLSE 3-month daily history.
+    RSI < 30 = oversold/fear, RSI > 70 = overbought/greed, 50 = neutral.
+    Returns integer 0-100.
+    """
+    try:
+        import yfinance as yf
+        t = yf.Ticker("^KLSE")
+        hist = t.history(period="3mo")
+        if hist.empty or len(hist) < 15:
+            return None
+        closes = hist['Close'].tolist()
+        changes = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+        gains = [max(c, 0) for c in changes[-14:]]
+        losses = [abs(min(c, 0)) for c in changes[-14:]]
+        avg_gain = sum(gains) / 14
+        avg_loss = sum(losses) / 14
+        if avg_loss == 0:
+            return 100
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return round(rsi)
+    except Exception as e:
+        print(f"  Warning MY RSI: {e}")
+    return None
+
+
+def fetch_cn_rsi():
+    """Compute CSI 500 RSI(14) as a China market sentiment proxy.
+    Uses AkShare stock_zh_index_daily(symbol='sh000905') daily history.
+    RSI < 30 = oversold/fear, RSI > 70 = overbought/greed, 50 = neutral.
+    Returns integer 0-100.
+    """
+    try:
+        import akshare as ak
+        df = ak.stock_zh_index_daily(symbol="sh000905")
+        if df is None or len(df) < 15:
+            return None
+        closes = df['close'].astype(float).tolist()
+        changes = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+        gains = [max(c, 0) for c in changes[-14:]]
+        losses = [abs(min(c, 0)) for c in changes[-14:]]
+        avg_gain = sum(gains) / 14
+        avg_loss = sum(losses) / 14
+        if avg_loss == 0:
+            return 100
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return round(rsi)
+    except Exception as e:
+        print(f"  Warning CN RSI: {e}")
+    return None
+
+
 def fetch_vhsi():
     """Fetch HSI Volatility Index (VHSI) from CNBC quote page."""
     try:
@@ -504,7 +559,27 @@ def main():
     else:
         print("  -- NKVI: no data")
 
-    # -- Step 8: Update date --
+    # -- Step 8: MY RSI --
+    print("\nMalaysia RSI(14)...")
+    my_rsi = fetch_my_rsi()
+    if my_rsi is not None:
+        html, ok = patch_field(html, "my", "fgi", my_rsi)
+        if ok: print(f"  OK my RSI    = {my_rsi}")
+        changes += ok
+    else:
+        print("  -- MY RSI: no data")
+
+    # -- Step 9: CN RSI --
+    print("\nChina RSI(14)...")
+    cn_rsi = fetch_cn_rsi()
+    if cn_rsi is not None:
+        html, ok = patch_field(html, "cn", "fgi", cn_rsi)
+        if ok: print(f"  OK cn RSI    = {cn_rsi}")
+        changes += ok
+    else:
+        print("  -- CN RSI: no data")
+
+    # -- Step 10: Update date --
     html = patch_update_date(html, today)
     print(f"\nDate -> {today}")
 
