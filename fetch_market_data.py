@@ -251,6 +251,33 @@ def fetch_fng():
     return None
 
 
+def fetch_sg_rsi():
+    """Compute STI RSI(14) as a Singapore market sentiment proxy.
+    RSI < 30 = oversold/fear, RSI > 70 = overbought/greed, 50 = neutral.
+    Returns integer 0-100.
+    """
+    try:
+        import yfinance as yf
+        t = yf.Ticker("^STI")
+        hist = t.history(period="3mo")
+        if hist.empty or len(hist) < 15:
+            return None
+        closes = hist['Close'].tolist()
+        changes = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+        gains = [max(c, 0) for c in changes[-14:]]
+        losses = [abs(min(c, 0)) for c in changes[-14:]]
+        avg_gain = sum(gains) / 14
+        avg_loss = sum(losses) / 14
+        if avg_loss == 0:
+            return 100
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return round(rsi)
+    except Exception as e:
+        print(f"  Warning SG RSI: {e}")
+    return None
+
+
 def fetch_vhsi():
     """Fetch HSI Volatility Index (VHSI) from CNBC quote page."""
     try:
@@ -448,6 +475,16 @@ def main():
         changes += ok
     else:
         print("  -- FGI: no data")
+
+    # -- Step 7a: SG RSI momentum --
+    print("\nSingapore RSI(14)...")
+    sg_rsi = fetch_sg_rsi()
+    if sg_rsi is not None:
+        html, ok = patch_field(html, "sg", "fgi", sg_rsi)
+        if ok: print(f"  OK sg RSI    = {sg_rsi}")
+        changes += ok
+    else:
+        print("  -- SG RSI: no data")
 
     # -- Step 7: Volatility Indices (VHSI / NKVI) --
     print("\nVolatility indices...")
