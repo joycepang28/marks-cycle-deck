@@ -1219,7 +1219,7 @@ const DEFAULT_DATA = {
       pe5y: 14.39,
       pe10y: 15.09,
       cape: null,
-      fgi: null,
+      fgi: 53,
       moomooUrl: 'https://www.moomoo.com/my/market/index-list/my-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EKLCI/',
       stage: 2,
@@ -1240,7 +1240,7 @@ const DEFAULT_DATA = {
       pe5y: 21.65,
       pe10y: 25.62,
       cape: null,
-      fgi: null,
+      fgi: 67,
       moomooUrl: 'https://www.moomoo.com/hk/market/index-list/cn-index',
       yahooUrl:  'https://finance.yahoo.com/quote/000905.SS/',
       stage: 2,
@@ -1425,10 +1425,10 @@ function renderCards() {
           另一常用口径：理杏仁市值加权PE（剔除亏损股）≈ 36×。两种口径均显著高于整体A股约10×。
         </p>
       </div>` : ''}
-      ${(m.id === 'us' || m.id === 'sg') && fgiStr !== null ? `
+      ${(['us','sg','my','cn'].includes(m.id)) && fgiStr !== null ? `
       <div class="fgi-bar-wrap">
         <div class="fgi-bar-header">
-          <span class="fgi-bar-label">${m.id === 'sg' ? '价格动量（RSI 14）' : '恐贪指数'}</span>
+          <span class="fgi-bar-label">${m.id === 'us' ? '恐贪指数' : '价格动量（RSI 14）'}</span>
           <span class="fgi-bar-range">最低 0 — 最高 100</span>
         </div>
         <div class="fgi-bar-track">
@@ -1436,11 +1436,11 @@ function renderCards() {
           <div class="fgi-bar-marker" style="left:${m.fgi}%"></div>
         </div>
         <div class="fgi-bar-labels">
-          <span class="fgi-zone fgi-extreme-fear">${m.id === 'sg' ? '0 超卖' : '0 极度恐慌'}</span>
+          <span class="fgi-zone fgi-extreme-fear">${m.id === 'us' ? '0 极度恐慌' : '0 超卖'}</span>
           <span class="fgi-zone fgi-fear">25</span>
           <span class="fgi-zone fgi-neutral">50 中性</span>
           <span class="fgi-zone fgi-greed">75</span>
-          <span class="fgi-zone fgi-extreme-greed">${m.id === 'sg' ? '100 超买' : '100'}</span>
+          <span class="fgi-zone fgi-extreme-greed">${m.id === 'us' ? '100' : '100 超买'}</span>
         </div>
         <div class="fgi-current-label" style="left:${Math.min(Math.max(m.fgi, 4), 92)}%">当前 ${m.fgi}</div>
       </div>` : ''}
