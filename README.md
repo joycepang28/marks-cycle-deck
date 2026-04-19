@@ -122,29 +122,93 @@ https://en.macromicro.me/series/46957/singapore-mm-fear-and-greed-index
 
 ### 🇲🇾 马来西亚 — 价格动量 RSI(14)
 
-- **来源：** Yahoo Finance `^KLSE`，通过 yfinance 获取近 3 个月日线
-- **计算方式：** 与 SG RSI 完全相同
+> **为什么选用 RSI，而不是波动率指数？**
+>
+> 马来西亚证券交易所无官方 VIX 类波动率指数。Bursa Malaysia 不发布隐含波动率产品，现有第三方情绪指数（如 Refinitiv / LSEG FBMKLCI Sentiment）均需付费订阅，无法自动化抓取。
+
+**当前替代方案：FBM KLCI RSI(14)**
+
+- **来源：** Yahoo Finance `^KLSE`，通过 [yfinance](https://github.com/ranaroussi/yfinance) 获取近 3 个月日线
+- **计算方式：**
   ```
   RSI(14) = 100 - 100 / (1 + 过去14日平均涨幅 / 过去14日平均跌幅)
   ```
-- **范围：** 0–100（`< 30` 超卖 / `30–70` 中性 / `> 70` 超买）
-- **进度条方向：** 左红（超卖）→ 右绿（超买），与其他市场一致
-- **数据字段：** 存储为 `fgi`
-- **选择该指标的原因：** 马来西亚无官方 VIX 类波动率指数；`^KLSE` 是 Yahoo Finance 上 FBM KLCI 的标准代码，数据稳定可用
+- **范围：** 0–100（与 FGI 同向）
+  - `< 30` → 超卖 / 市场悲观
+  - `30–70` → 中性动量
+  - `> 70` → 超买 / 市场乐观
+- **局限性：**
+  - RSI 仅反映价格动量，不包含成交量、波动率、市场广度等维度
+  - 趋势性市场中 RSI 可长期维持高位，不代表顶部
+  - 建议结合卡片上的 TTM PE 与 PE 历史均值综合判断
+- **进度条颜色：** 左红（超卖）→ 橙（中性）→ 右绿（超买），与美股 FGI / 新加坡 RSI 同向
+- **数据字段：** 存储为 `fgi`，与 SG 共用同一渲染逻辑
+
+**如需手动验证当前 RSI：**
+```python
+import yfinance as yf
+t = yf.Ticker("^KLSE")
+hist = t.history(period="3mo")
+closes = hist['Close'].tolist()
+changes = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+gains = [max(c, 0) for c in changes[-14:]]
+losses = [abs(min(c, 0)) for c in changes[-14:]]
+rsi = 100 - 100 / (1 + sum(gains)/14 / (sum(losses)/14))
+print(f"MY RSI(14) = {rsi:.1f}")
+```
+
+**如未来 Bursa Malaysia 开放官方情绪指数 API，可替换 `fetch_my_rsi()` 为对应接口。**
 
 ---
 
 ### 🇨🇳 中国 A 股 — 价格动量 RSI(14)
 
-- **来源：** AkShare `stock_zh_index_daily(symbol='sh000905')` 获取中证500全历史日线
+> **为什么不用 Yahoo Finance，改用 AkShare？**
+>
+> Yahoo Finance `000905.SS`（上证）与 `399905.SZ`（深证）均无历史日线返回（只有当日数据），无法计算 RSI。AkShare `sh000905` 含中证500全历史收盘价，共 5000+ 交易日，是目前最靠谱的免费来源。
+
+**当前方案：中证500 RSI(14)**
+
+- **来源：** [AkShare](https://akshare.akfamily.xyz/) `stock_zh_index_daily(symbol='sh000905')`
 - **计算方式：**
   ```
   RSI(14) = 100 - 100 / (1 + 过去14日平均涨幅 / 过去14日平均跌幅)
   ```
-- **范围：** 0–100（`< 30` 超卖 / `30–70` 中性 / `> 70` 超买）
-- **进度条方向：** 左红（超卖）→ 右绿（超买），与其他市场一致
-- **数据字段：** 存储为 `fgi`
-- **选择该指标的原因：** Yahoo Finance `000905.SS` 与 `399905.SZ` 均无历史日线可用；AkShare `sh000905` 数据完整，含 5000+ 交易日，可靠性高
+- **范围：** 0–100（与 FGI 同向）
+  - `< 30` → 超卖 / 市场悲观
+  - `30–70` → 中性动量
+  - `> 70` → 超买 / 市场乐观
+- **局限性：**
+  - RSI 仅反映价格动量，不包含成交量、北向资金流、情绪广度等维度
+  - A 股容易受政策层面消息驱动大幅波动， RSI 超买后可能继续上涨
+  - 建议结合卡片上的 TTM PE 与 PE 历史均值综合判断
+- **进度条颜色：** 左红（超卖）→ 橙（中性）→ 右绿（超买），与其他市场一致
+- **数据字段：** 存储为 `fgi`，与 SG / MY 共用同一渲染逻辑
+
+**如需手动验证当前 RSI：**
+```python
+import akshare as ak
+df = ak.stock_zh_index_daily(symbol="sh000905")
+closes = df['close'].astype(float).tolist()
+changes = [closes[i] - closes[i-1] for i in range(1, len(closes))]
+gains = [max(c, 0) for c in changes[-14:]]
+losses = [abs(min(c, 0)) for c in changes[-14:]]
+rsi = 100 - 100 / (1 + sum(gains)/14 / (sum(losses)/14))
+print(f"CN RSI(14) = {rsi:.1f}")
+```
+
+**当前 AkShare 返回中证 500 各字段说明：**
+
+| 字段 | 说明 |
+|------|---------|
+| `date` | 交易日期 |
+| `open` | 开盘价 |
+| `high` | 最高价 |
+| `low` | 最低价 |
+| `close` | 收盘价（用于计算 RSI）|
+| `volume` | 成交量 |
+
+**如未来中证指数公司或东方财富开放稳定的情绪 API，可替换 `fetch_cn_rsi()` 为对应接口。**
 
 ---
 
