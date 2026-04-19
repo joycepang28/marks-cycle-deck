@@ -8,13 +8,21 @@ Data sources:
   - Index level (MY)           : i3investor.com (klse)
   - Index level (CN)           : Eastmoney push2 API
   - YTD %                      : Eastmoney kline API (year-start close)
-  - TTM PE + 5Y/10Y avg        : worldperatio.com (HTML parse)
+  - TTM PE + 5Y/10Y (non-CN)  : worldperatio.com (HTML parse)
+  - CN TTM PE (current)        : AkShare stock_zh_index_value_csindex (中证官方市盈率2)
+  - CN PE 5Y/10Y avg           : AkShare stock_index_pe_lg (乐咕乐股, scaled to CSIndex basis)
   - CAPE                       : multpl.com/shiller-pe (HTML parse)
   - Fear & Greed               : api.alternative.me/fng/ (free JSON API)
 """
 
 import re, json, time, datetime
 import urllib.request, urllib.parse, urllib.error
+try:
+    import akshare as ak
+    import pandas as pd
+    HAS_AKSHARE = True
+except ImportError:
+    HAS_AKSHARE = False
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36"
 
@@ -33,9 +41,9 @@ def safe_float(v, default=None):
     except Exception:
         return default
 
-# ─────────────────────────────────────────────
-# 1. CNBC — index level for US/SG/HK/JP
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 1. CNBC -- index level for US/SG/HK/JP
+# ---------------------------------------------
 CNBC_SYMBOLS = {
     "us": ".SPX",    # S&P 500
     "sg": ".STI",    # Straits Times Index
@@ -52,21 +60,18 @@ def fetch_cnbc(symbol):
         if m:
             return safe_float(m.group(1))
     except Exception as e:
-        print(f"  ⚠ CNBC {symbol}: {e}")
+        print(f"  Warning CNBC {symbol}: {e}")
     return None
 
-# ─────────────────────────────────────────────
-# 2. Eastmoney — index level for CN
-#    and year-start close for all markets (YTD)
-# ─────────────────────────────────────────────
-# secid format: {market}.{code}
-# 1=SH, 0=SZ; 100=US indices, 116=HK, foreign markets
+# ---------------------------------------------
+# 2. Eastmoney -- index level for CN + YTD
+# ---------------------------------------------
 EASTMONEY_SECIDS = {
-    "cn":  "1.000905",   # CSI 500
-    "us":  "100.SPX",    # S&P 500 (YTD only)
-    "sg":  "100.STI",    # STI (YTD only)
-    "hk":  "100.HSI",    # HSI (YTD only)
-    "jp":  "100.N225",   # Nikkei 225 (YTD only)
+    "cn":  "1.000905",
+    "us":  "100.SPX",
+    "sg":  "100.STI",
+    "hk":  "100.HSI",
+    "jp":  "100.N225",
 }
 
 def fetch_eastmoney_level(secid):
@@ -80,10 +85,9 @@ def fetch_eastmoney_level(secid):
             return None
         f43 = d.get("f43")
         if f43 is not None:
-            # eastmoney returns price * 100
             return round(float(f43) / 100, 2)
     except Exception as e:
-        print(f"  ⚠ Eastmoney level {secid}: {e}")
+        print(f"  Warning Eastmoney level {secid}: {e}")
     return None
 
 def fetch_eastmoney_yearstart(secid):
@@ -102,22 +106,20 @@ def fetch_eastmoney_yearstart(secid):
         data = json.loads(raw)
         klines = (data.get("data") or {}).get("klines", [])
         if klines:
-            # kline format: date,open,close,high,low,vol,...
             parts = klines[0].split(",")
-            return safe_float(parts[2])  # close price
+            return safe_float(parts[2])
     except Exception as e:
-        print(f"  ⚠ Eastmoney yearstart {secid}: {e}")
+        print(f"  Warning Eastmoney yearstart {secid}: {e}")
     return None
 
-# ─────────────────────────────────────────────
-# 3. i3investor.com — MY KLCI current level
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 3. i3investor.com -- MY KLCI current level
+# ---------------------------------------------
 def fetch_my_klci():
     """Return current FBM KLCI level from i3investor."""
     url = "https://klse.i3investor.com/web/index/market-index"
     try:
         raw = get(url)
-        # Pattern: <strong>1,695.21</strong> near FBM KLCI
         idx = raw.find("FBM KLCI")
         if idx < 0:
             idx = raw.find("KLCI")
@@ -127,34 +129,33 @@ def fetch_my_klci():
             if m:
                 return safe_float(m.group(1))
     except Exception as e:
-        print(f"  ⚠ MY KLCI (i3investor): {e}")
+        print(f"  Warning MY KLCI (i3investor): {e}")
     return None
 
 def fetch_my_yearstart():
-    """Estimate MY KLCI year-start from Eastmoney (best available)."""
-    # Try eastmoney with KLSE — may not be available
-    # Fallback: use known approximate value
+    """Try to get MY KLCI year-start from Eastmoney; else estimate."""
     for secid in ["104.KLSE", "105.KLSE", "106.KLSE"]:
         val = fetch_eastmoney_yearstart(secid)
         if val:
             return val
     return None
 
-# ─────────────────────────────────────────────
-# 4. worldperatio.com — TTM PE + 5Y/10Y avg
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 4. worldperatio.com -- TTM PE + 5Y/10Y (non-CN)
+# ---------------------------------------------
 WORLDPE_URLS = {
     "us": "https://worldperatio.com/index/sp-500/",
     "sg": "https://worldperatio.com/area/singapore/",
     "hk": "https://worldperatio.com/area/hong-kong/",
     "jp": "https://worldperatio.com/area/japan/",
     "my": "https://worldperatio.com/area/malaysia/",
-    "cn": "https://worldperatio.com/area/china/",
 }
 
 def fetch_worldpe(market_id):
     """Return (ttm_pe, pe5y, pe10y) from worldperatio.com."""
-    url = WORLDPE_URLS[market_id]
+    url = WORLDPE_URLS.get(market_id)
+    if not url:
+        return None, None, None
     try:
         html = get(url)
         current_pe = None
@@ -175,12 +176,52 @@ def fetch_worldpe(market_id):
             pe10y = safe_float(m10.group(1))
         return current_pe, pe5y, pe10y
     except Exception as e:
-        print(f"  ⚠ worldperatio {market_id}: {e}")
+        print(f"  Warning worldperatio {market_id}: {e}")
     return None, None, None
 
-# ─────────────────────────────────────────────
-# 5. multpl.com — Shiller CAPE (US only)
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 5. AkShare -- CN CSI500 PE (中证官方 + 乐咕乐股)
+# ---------------------------------------------
+def fetch_cn_pe():
+    """
+    Return (ttm_pe, pe5y, pe10y) for CSI 500:
+      Current: stock_zh_index_value_csindex 市盈率2 (中证指数公司官方)
+      History: stock_index_pe_lg 静态市盈率 scaled to CSIndex level (乐咕乐股)
+    """
+    if not HAS_AKSHARE:
+        print("  Warning: AkShare not installed -- CN PE skipped")
+        return None, None, None
+    try:
+        # Current PE from CSIndex official (市盈率2 = dynamic/TTM PE)
+        df_cs = ak.stock_zh_index_value_csindex(symbol="000905")
+        df_cs['\u65e5\u671f'] = pd.to_datetime(df_cs['\u65e5\u671f'])
+        df_cs = df_cs.sort_values('\u65e5\u671f')
+        pe_current = round(float(df_cs.iloc[-1]['\u5e02\u76c8\u73872']), 2)
+
+        # Long-history averages from legulegu (2007-present)
+        df_lg = ak.stock_index_pe_lg(symbol="\u4e2d\u8bc1500")
+        df_lg['date'] = pd.to_datetime(df_lg['\u65e5\u671f'])
+        df_lg = df_lg.sort_values('date')
+        latest_date = df_lg['date'].max()
+
+        df_5y  = df_lg[df_lg['date'] >= latest_date - pd.DateOffset(years=5)]
+        df_10y = df_lg[df_lg['date'] >= latest_date - pd.DateOffset(years=10)]
+
+        # Scale legulegu LYR series to CSIndex level for consistency
+        lg_latest_lyr = float(df_lg.iloc[-1]['\u9759\u6001\u5e02\u76c8\u7387'])
+        scale = pe_current / lg_latest_lyr if lg_latest_lyr else 1.0
+
+        pe5y  = round(float(df_5y['\u9759\u6001\u5e02\u76c8\u7387'].mean()) * scale, 2)
+        pe10y = round(float(df_10y['\u9759\u6001\u5e02\u76c8\u7387'].mean()) * scale, 2)
+
+        return pe_current, pe5y, pe10y
+    except Exception as e:
+        print(f"  Warning CN PE (AkShare): {e}")
+        return None, None, None
+
+# ---------------------------------------------
+# 6. multpl.com -- Shiller CAPE (US only)
+# ---------------------------------------------
 def fetch_cape():
     try:
         html = get("https://www.multpl.com/shiller-pe")
@@ -194,24 +235,24 @@ def fetch_cape():
                 if val and 5 < val < 100:
                     return val
     except Exception as e:
-        print(f"  ⚠ CAPE (multpl): {e}")
+        print(f"  Warning CAPE (multpl): {e}")
     return None
 
-# ─────────────────────────────────────────────
-# 6. alternative.me — Fear & Greed Index
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 7. alternative.me -- Fear & Greed Index
+# ---------------------------------------------
 def fetch_fng():
     try:
         raw = get("https://api.alternative.me/fng/?limit=1", accept="application/json,*/*")
         data = json.loads(raw)
         return int(data["data"][0]["value"])
     except Exception as e:
-        print(f"  ⚠ Fear & Greed: {e}")
+        print(f"  Warning Fear & Greed: {e}")
     return None
 
-# ─────────────────────────────────────────────
-# 7. Patch index.html DEFAULT_DATA in-place
-# ─────────────────────────────────────────────
+# ---------------------------------------------
+# 8. Patch index.html DEFAULT_DATA in-place
+# ---------------------------------------------
 def patch_field(html, market_id, field, new_val):
     """Replace a numeric JS field inside the market object block."""
     if new_val is None:
@@ -232,87 +273,80 @@ def patch_field(html, market_id, field, new_val):
 def patch_update_date(html, date_str):
     return re.sub(r"(updateDate:\s*')[^']+'", rf"\g<1>{date_str}'", html)
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # Main
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 def main():
     today = str(datetime.date.today())
     print(f"\n{'='*55}")
-    print(f"  Marks Cycle Deck — Data Fetch  {today}")
+    print(f"  Marks Cycle Deck -- Data Fetch  {today}")
     print(f"{'='*55}\n")
 
     with open("index.html", "r", encoding="utf-8") as f:
         html = f.read()
 
     changes = 0
+    all_markets = ["us", "sg", "hk", "jp", "my", "cn"]
 
-    # ── Step 1: Fetch current index levels ───────────────
-    print("📊 Index levels…")
+    # -- Step 1: Fetch current index levels --
+    print("Index levels...")
 
     levels = {}
 
-    # US, SG, HK, JP via CNBC
     for mid, sym in CNBC_SYMBOLS.items():
         lv = fetch_cnbc(sym)
         time.sleep(0.5)
         if lv:
             levels[mid] = lv
-            print(f"  ✓ {mid:2s} ({sym}): {lv:,.2f}")
+            print(f"  OK {mid} ({sym}): {lv:,.2f}")
         else:
-            print(f"  ⚠ {mid:2s} ({sym}): no data from CNBC")
+            print(f"  WARN {mid} ({sym}): no data from CNBC")
 
-    # CN via Eastmoney
     lv_cn = fetch_eastmoney_level(EASTMONEY_SECIDS["cn"])
     if lv_cn:
         levels["cn"] = lv_cn
-        print(f"  ✓ cn (000905.SS): {lv_cn:,.2f}")
+        print(f"  OK cn (000905.SS): {lv_cn:,.2f}")
     else:
-        print(f"  ⚠ cn: no data from Eastmoney")
+        print(f"  WARN cn: no data from Eastmoney")
 
-    # MY via i3investor
     lv_my = fetch_my_klci()
     if lv_my:
         levels["my"] = lv_my
-        print(f"  ✓ my (KLCI): {lv_my:,.2f}")
+        print(f"  OK my (KLCI): {lv_my:,.2f}")
     else:
-        print(f"  ⚠ my: no data from i3investor")
+        print(f"  WARN my: no data from i3investor")
 
-    # ── Step 2: Fetch year-start closes for YTD ──────────
-    print("\n📅 Year-start closes for YTD calculation (Eastmoney)…")
+    # -- Step 2: Fetch year-start closes for YTD --
+    print("\nYear-start closes for YTD (Eastmoney)...")
 
     yearstart = {}
-    em_ytd_markets = {
+    em_ytd = {
         "us": EASTMONEY_SECIDS["us"],
         "sg": EASTMONEY_SECIDS["sg"],
         "hk": EASTMONEY_SECIDS["hk"],
         "jp": EASTMONEY_SECIDS["jp"],
         "cn": EASTMONEY_SECIDS["cn"],
     }
-    for mid, secid in em_ytd_markets.items():
+    for mid, secid in em_ytd.items():
         ys = fetch_eastmoney_yearstart(secid)
         time.sleep(0.4)
         if ys:
             yearstart[mid] = ys
-            print(f"  ✓ {mid:2s} year-start: {ys:,.2f}")
+            print(f"  OK {mid} year-start: {ys:,.2f}")
         else:
-            print(f"  ⚠ {mid:2s} year-start: unavailable")
+            print(f"  WARN {mid} year-start: unavailable")
 
-    # MY year-start from Eastmoney (may fail) — fallback to estimate
     ys_my = fetch_my_yearstart()
     if ys_my:
         yearstart["my"] = ys_my
-        print(f"  ✓ my year-start: {ys_my:,.2f}")
-    else:
-        # Estimate: if KLCI level is known, assume ~1.5% YTD
-        if "my" in levels:
-            ys_my = round(levels["my"] / 1.015, 2)
-            yearstart["my"] = ys_my
-            print(f"  ~ my year-start (estimated): {ys_my:,.2f}")
+        print(f"  OK my year-start: {ys_my:,.2f}")
+    elif "my" in levels:
+        ys_my = round(levels["my"] / 1.015, 2)
+        yearstart["my"] = ys_my
+        print(f"  ~ my year-start (estimated at +1.5%): {ys_my:,.2f}")
 
-    # ── Step 3: Compute YTD % and patch HTML ─────────────
-    print("\n📈 Patching level + YTD into index.html…")
-    all_markets = ["us", "sg", "hk", "jp", "my", "cn"]
-
+    # -- Step 3: Patch level + YTD --
+    print("\nPatching level + YTD...")
     for mid in all_markets:
         lv = levels.get(mid)
         ys = yearstart.get(mid)
@@ -320,64 +354,83 @@ def main():
         if lv:
             html, ok = patch_field(html, mid, "level", round(lv))
             if ok:
-                print(f"  ✓ {mid:2s} level  = {round(lv):>9,}")
+                print(f"  OK {mid} level  = {round(lv):>9,}")
             changes += ok
 
         if lv and ys:
             ytd = round((lv / ys - 1) * 100, 1)
             html, ok = patch_field(html, mid, "ytd", ytd)
             if ok:
-                print(f"  ✓ {mid:2s} ytd    = {ytd:>+6.1f}%")
+                print(f"  OK {mid} ytd    = {ytd:>+6.1f}%")
             changes += ok
 
-    # ── Step 4: PE ratios ─────────────────────────────────
-    print("\n📊 PE ratios (worldperatio.com)…")
-    for mid in all_markets:
+    # -- Step 4: PE ratios (non-CN via worldperatio) --
+    non_cn = [m for m in all_markets if m != "cn"]
+    print("\nPE ratios (worldperatio.com, non-CN)...")
+    for mid in non_cn:
         pe, pe5y, pe10y = fetch_worldpe(mid)
         time.sleep(1.2)
         if pe:
             html, ok = patch_field(html, mid, "ttmPE", round(pe, 2))
-            if ok: print(f"  ✓ {mid:2s} ttmPE  = {pe:>6.2f}×")
+            if ok: print(f"  OK {mid} ttmPE  = {pe:>6.2f}x")
             changes += ok
         else:
-            print(f"  – {mid:2s} ttmPE: no data")
+            print(f"  -- {mid} ttmPE: no data")
         if pe5y:
             html, ok = patch_field(html, mid, "pe5y",  round(pe5y, 2))
-            if ok: print(f"  ✓ {mid:2s} pe5y   = {pe5y:>6.2f}×")
+            if ok: print(f"  OK {mid} pe5y   = {pe5y:>6.2f}x")
             changes += ok
         if pe10y:
             html, ok = patch_field(html, mid, "pe10y", round(pe10y, 2))
-            if ok: print(f"  ✓ {mid:2s} pe10y  = {pe10y:>6.2f}×")
+            if ok: print(f"  OK {mid} pe10y  = {pe10y:>6.2f}x")
             changes += ok
 
-    # ── Step 5: CAPE ──────────────────────────────────────
-    print("\n🔢 CAPE (multpl.com)…")
+    # -- Step 4b: CN PE via AkShare (CSIndex official + legulegu history) --
+    print("\nCN PE (CSIndex official + legulegu history)...")
+    cn_pe, cn_pe5y, cn_pe10y = fetch_cn_pe()
+    if cn_pe:
+        html, ok = patch_field(html, "cn", "ttmPE", cn_pe)
+        if ok: print(f"  OK cn ttmPE  = {cn_pe:>6.2f}x  (CSIndex official)")
+        changes += ok
+    else:
+        print("  -- cn ttmPE: no data")
+    if cn_pe5y:
+        html, ok = patch_field(html, "cn", "pe5y",  cn_pe5y)
+        if ok: print(f"  OK cn pe5y   = {cn_pe5y:>6.2f}x")
+        changes += ok
+    if cn_pe10y:
+        html, ok = patch_field(html, "cn", "pe10y", cn_pe10y)
+        if ok: print(f"  OK cn pe10y  = {cn_pe10y:>6.2f}x")
+        changes += ok
+
+    # -- Step 5: CAPE --
+    print("\nCAPE (multpl.com)...")
     cape = fetch_cape()
     if cape:
         html, ok = patch_field(html, "us", "cape", round(cape, 2))
-        if ok: print(f"  ✓ us CAPE   = {cape:.2f}")
+        if ok: print(f"  OK us CAPE   = {cape:.2f}")
         changes += ok
     else:
-        print("  – CAPE: no data")
+        print("  -- CAPE: no data")
 
-    # ── Step 6: Fear & Greed ──────────────────────────────
-    print("\n😱 Fear & Greed (alternative.me)…")
+    # -- Step 6: Fear & Greed --
+    print("\nFear & Greed (alternative.me)...")
     fgi = fetch_fng()
     if fgi is not None:
         html, ok = patch_field(html, "us", "fgi", fgi)
-        if ok: print(f"  ✓ us FGI    = {fgi}")
+        if ok: print(f"  OK us FGI    = {fgi}")
         changes += ok
     else:
-        print("  – FGI: no data")
+        print("  -- FGI: no data")
 
-    # ── Step 7: Update date ───────────────────────────────
+    # -- Step 7: Update date --
     html = patch_update_date(html, today)
-    print(f"\n📅 updateDate → {today}")
+    print(f"\nDate -> {today}")
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
-    print(f"\n✅ Done — {changes} fields updated\n")
+    print(f"\nDone -- {changes} fields updated\n")
 
     with open("fetch_summary.json", "w") as f:
         json.dump({"date": today, "fields_updated": changes}, f)
