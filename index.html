@@ -500,6 +500,84 @@
     .pe-gauge-fill.medium { background: var(--caution); }
     .pe-gauge-fill.high   { background: var(--bear); }
 
+    /* Fear & Greed Index bar — US only */
+    .fgi-bar-wrap {
+      margin-top: var(--space-3);
+      margin-bottom: var(--space-2);
+    }
+    .fgi-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+    .fgi-bar-label {
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.03em;
+    }
+    .fgi-bar-range {
+      font-size: 9px;
+      color: var(--text-faint);
+      opacity: 0.7;
+    }
+    .fgi-bar-track {
+      position: relative;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(
+        to right,
+        #f85149 0%,
+        #d29922 40%,
+        #d29922 60%,
+        #3fb950 100%
+      );
+      overflow: visible;
+    }
+    .fgi-bar-fill {
+      /* unused — using gradient track + marker instead */
+      display: none;
+    }
+    .fgi-bar-marker {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--surface);
+      box-shadow: 0 0 0 2px var(--text);
+      transition: left 0.8s cubic-bezier(0.16,1,0.3,1);
+      z-index: 2;
+    }
+    .fgi-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .fgi-zone {
+      font-size: 8px;
+      color: var(--text-faint);
+      white-space: nowrap;
+    }
+    .fgi-extreme-fear { color: #f85149; }
+    .fgi-fear         { color: #d29922; }
+    .fgi-neutral      { color: var(--text-muted); }
+    .fgi-greed        { color: #3fb950; }
+    .fgi-extreme-greed{ color: #3fb950; }
+    .fgi-current-label {
+      position: relative;
+      margin-top: 2px;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: var(--font-mono);
+      transform: translateX(-50%);
+      display: inline-block;
+      white-space: nowrap;
+    }
+
     /* PE Comparison — unified 3-row bar chart */
     .pe-compare {
       margin-top: var(--space-3);
@@ -831,8 +909,7 @@
             <th>TTM PE</th>
             <th>5年均PE</th>
             <th>10年均PE</th>
-            <th>CAPE</th>
-            <th>恐贪指数</th>
+            <th>恐贪指数（美股）</th>
             <th>周期阶段</th>
             <th>建议姿态</th>
           </tr>
@@ -1219,10 +1296,10 @@ function renderCards() {
   grid.innerHTML = appData.markets.map(m => {
     const hist = histPE[m.id] || 15;
     const peClass = getPEClass(m.ttmPE, hist);
-    const pePct = Math.min((m.ttmPE / (hist * 2)) * 100, 100);
+    const PE_MAX = 50; // 统一基准：所有市场进度条用同一满格值
+    const pePct = Math.min((m.ttmPE / PE_MAX) * 100, 100);
     const ytdClass = m.ytd >= 0 ? 'up' : 'down';
-    const capeStr = m.cape ? m.cape.toFixed(1) : '—';
-    const fgiStr = m.fgi ? m.fgi : '—';
+    const fgiStr = m.fgi != null ? m.fgi : null;
 
     return `
     <div class="market-card ${stageClass[m.stage] || 'stage-2'}">
@@ -1247,11 +1324,26 @@ function renderCards() {
           <span class="metric-label">TTM PE${m.id === 'cn' ? '<sup style="font-size:8px;color:var(--text-faint);margin-left:2px;" title="中证指数公司官方TTM PE（总市值÷TTM盈利，动态法）">¹</sup>' : ''}</span>
           <span class="metric-value ${peClass === 'high' ? 'down' : peClass === 'low' ? 'up' : 'warn'}">${m.ttmPE.toFixed(1)}×</span>
         </div>
-        <div class="metric">
-          <span class="metric-label">${m.cape ? 'CAPE' : '恐贪指数'}</span>
-          <span class="metric-value ${m.cape && m.cape > 30 ? 'down' : ''}">${m.cape ? capeStr : fgiStr}</span>
-        </div>
       </div>
+      ${m.id === 'us' && fgiStr !== null ? `
+      <div class="fgi-bar-wrap">
+        <div class="fgi-bar-header">
+          <span class="fgi-bar-label">恐贪指数</span>
+          <span class="fgi-bar-range">最低 0 — 最高 100</span>
+        </div>
+        <div class="fgi-bar-track">
+          <div class="fgi-bar-fill" style="width:${m.fgi}%"></div>
+          <div class="fgi-bar-marker" style="left:${m.fgi}%"></div>
+        </div>
+        <div class="fgi-bar-labels">
+          <span class="fgi-zone fgi-extreme-fear">0 极度恐慷</span>
+          <span class="fgi-zone fgi-fear">25 恐慷</span>
+          <span class="fgi-zone fgi-neutral">50 中性</span>
+          <span class="fgi-zone fgi-greed">75 贪婪</span>
+          <span class="fgi-zone fgi-extreme-greed">100</span>
+        </div>
+        <div class="fgi-current-label" style="left:${Math.min(Math.max(m.fgi, 4), 92)}%">当前 ${m.fgi}</div>
+      </div>` : ''}
       <div class="pe-compare">
         <div class="pe-compare-title">
           PE 对比
@@ -1267,14 +1359,14 @@ function renderCards() {
         <div class="pe-compare-row">
           <div class="pe-compare-label">5年均</div>
           <div class="pe-compare-track">
-            <div class="pe-compare-fill hist-fill" style="width:${m.pe5y ? Math.min((m.pe5y / (hist * 2)) * 100, 100).toFixed(1) : 0}%"></div>
+            <div class="pe-compare-fill hist-fill" style="width:${m.pe5y ? Math.min((m.pe5y / PE_MAX) * 100, 100).toFixed(1) : 0}%"></div>
           </div>
           <div class="pe-compare-val hist">${m.pe5y ? m.pe5y.toFixed(1) + '×' : '—'}</div>
         </div>
         <div class="pe-compare-row">
           <div class="pe-compare-label">10年均</div>
           <div class="pe-compare-track">
-            <div class="pe-compare-fill hist-fill" style="width:${m.pe10y ? Math.min((m.pe10y / (hist * 2)) * 100, 100).toFixed(1) : 0}%"></div>
+            <div class="pe-compare-fill hist-fill" style="width:${m.pe10y ? Math.min((m.pe10y / PE_MAX) * 100, 100).toFixed(1) : 0}%"></div>
           </div>
           <div class="pe-compare-val hist">${m.pe10y ? m.pe10y.toFixed(1) + '×' : '—'}</div>
         </div>
@@ -1428,8 +1520,7 @@ function renderTable() {
       <td>${m.ttmPE.toFixed(1)}×</td>
       <td style="color:var(--text-muted)">${m.pe5y ? m.pe5y.toFixed(1) + '×' : '—'}</td>
       <td style="color:var(--text-muted)">${m.pe10y ? m.pe10y.toFixed(1) + '×' : '—'}</td>
-      <td>${m.cape ? m.cape.toFixed(1) : '—'}</td>
-      <td>${m.fgi || '—'}</td>
+      <td>${m.id === 'us' && m.fgi != null ? m.fgi : '—'}</td>
       <td style="color:var(--text-muted)">${m.stageLabel}</td>
       <td style="font-weight:700;cursor:pointer;${stageColors[m.stage] || ''}" onclick="openPosturePopup('${m.id}')" title="点击查看详细分析">${m.postureLabel} <span style="font-size:0.75em;opacity:0.6">ⓘ</span></td>
     </tr>`).join('');
@@ -1859,10 +1950,10 @@ function openModal() {
           <label class="form-label">TTM PE (倍)</label>
           <input type="number" step="0.1" class="form-input" id="f_${m.id}_ttmPE" value="${m.ttmPE}" />
         </div>
-        <div class="form-group">
-          <label class="form-label">${m.id === 'us' ? 'CAPE' : '自定义指标'}</label>
-          <input type="number" step="0.1" class="form-input" id="f_${m.id}_cape" value="${m.cape || m.fgi || ''}" placeholder="${m.id === 'us' ? 'CAPE值' : '可填恐贪指数等'}" />
-        </div>
+        ${m.id === 'us' ? `<div class="form-group">
+          <label class="form-label">恐贪指数 (0–100)</label>
+          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="如 27" />
+        </div>` : '<div class="form-group"></div>'}
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1930,10 +2021,10 @@ function saveData() {
     if (!isNaN(pe5yVal)) m.pe5y = pe5yVal;
     const pe10yVal = parseFloat(v('pe10y'));
     if (!isNaN(pe10yVal)) m.pe10y = pe10yVal;
-    const capeVal = parseFloat(v('cape'));
-    if (!isNaN(capeVal)) {
-      if (m.id === 'us') { m.cape = capeVal; m.fgi = null; }
-      else { m.fgi = capeVal; m.cape = null; }
+    // 恐贪指数只对美股有效，存入 fgi字段
+    if (m.id === 'us') {
+      const fgiVal = parseFloat(v('cape')); // input id仍用 cape，但存入 fgi
+      if (!isNaN(fgiVal)) { m.fgi = fgiVal; m.cape = null; }
     }
     m.stage = parseInt(v('stage')) || m.stage;
     m.stageLabel = v('stageLabel') || m.stageLabel;
