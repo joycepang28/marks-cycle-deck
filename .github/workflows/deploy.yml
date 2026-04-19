@@ -15,15 +15,22 @@ permissions:
 
 jobs:
   # ────────────────────────────────────────────────────────────
-  # Job 1 (scheduled only): fetch latest data, commit to main
+  # Job 1 (schedule / manual only): fetch latest market data
+  #   - Index levels (US/SG/HK/JP via CNBC; CN via Eastmoney; MY via i3investor)
+  #   - TTM PE / 5Y / 10Y averages (worldperatio.com; CN via AkShare CSIndex)
+  #   - US CAPE (multpl.com)
+  #   - US Fear & Greed Index (alternative.me)
+  #   - SG RSI(14) momentum (computed from Yahoo Finance ^STI 3-month history)
+  #   - HK VHSI volatility index (CNBC)
+  #   - JP NKVI volatility index (Yahoo Finance ^NKVI.OS)
   # ────────────────────────────────────────────────────────────
   fetch-data:
     name: Fetch market data
     runs-on: ubuntu-latest
-    # Only run on schedule or when manually triggered with update intent
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     outputs:
       data_changed: ${{ steps.check.outputs.changed }}
+
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -31,65 +38,99 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # Cache pip packages so repeat runs are fast (~30s vs ~3min)
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            yfinance \
+            akshare \
+            requests \
+            beautifulsoup4 \
+            lxml
+
       - name: Fetch and patch index.html
         id: fetch
-        run: python3 fetch_market_data.py
+        run: |
+          echo "Running fetch_market_data.py ..."
+          python3 fetch_market_data.py
+          echo "--- fetch_summary.json ---"
+          cat fetch_summary.json
 
       - name: Check for changes
         id: check
         run: |
-          git diff --quiet index.html && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          git diff --quiet index.html \
+            && echo "changed=false" >> "$GITHUB_OUTPUT" \
+            || echo "changed=true"  >> "$GITHUB_OUTPUT"
 
-      - name: Commit updated data
+      - name: Commit updated data to main
         if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html fetch_summary.json
           DATE=$(date -u '+%Y-%m-%d')
-          git commit -m "data: auto-fetch market data ${DATE} [skip ci]"
+          git commit -m "data: auto-fetch ${DATE} — PE / RSI / VHSI / NKVI / FGI [skip ci]"
           git push origin main
+          echo "✅ Committed and pushed data update for ${DATE}"
 
-      - name: No changes
+      - name: No changes detected
         if: steps.check.outputs.changed == 'false'
-        run: echo "No data changes detected — skipping commit."
+        run: echo "ℹ️  No data changes detected — skipping commit."
 
   # ────────────────────────────────────────────────────────────
   # Job 2: build standalone HTML and deploy to gh-pages
-  # Runs on every push to main (including data commits above)
+  #   Runs on every push to main (including data commits from Job 1)
+  #   Also runs after Job 1 when data changed
   # ────────────────────────────────────────────────────────────
   deploy:
     name: Build & deploy to gh-pages
     runs-on: ubuntu-latest
-    # On schedule/dispatch: wait for fetch-data to finish first
+
+    # On push: fetch-data is skipped, so 'needs' would block deploy.
+    # Fix: make fetch-data optional — deploy runs when:
+    #   (a) triggered by a push directly, OR
+    #   (b) fetch-data completed (regardless of skip) and data changed or manual
     needs: [fetch-data]
     if: |
       always() &&
-      (github.event_name == 'push' ||
-       needs.fetch-data.outputs.data_changed == 'true' ||
-       github.event_name == 'workflow_dispatch')
+      (
+        github.event_name == 'push' ||
+        (needs.fetch-data.result == 'success' && needs.fetch-data.outputs.data_changed == 'true') ||
+        github.event_name == 'workflow_dispatch'
+      )
+
     steps:
-      - name: Checkout main (latest, after data commit)
+      - name: Checkout main (after any data commit)
         uses: actions/checkout@v4
         with:
           ref: main
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Download Chart.js
+      - name: Download Chart.js for standalone build
         run: |
           curl -sL "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" \
                -o chart.umd.min.js
 
-      - name: Build standalone HTML
+      - name: Build standalone HTML (inline all deps, remove external CDNs)
         run: python3 build_standalone.py
 
       - name: Deploy to gh-pages
@@ -99,4 +140,4 @@ jobs:
           publish_dir: ./dist
           publish_branch: gh-pages
           force_orphan: false
-          commit_message: "deploy: ${{ github.sha }} — $(date -u '+%Y-%m-%d')"
+          commit_message: "deploy: ${{ github.sha }}"
