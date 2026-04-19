@@ -1791,10 +1791,40 @@ function drawPendulum() {
     : { 1: '#1a7f37', 2: '#9a6700', 3: '#cf222e' };
 
   const BALL_R = 16;
+  const BALL_MIN_DIST = BALL_R * 2 + 4; // min centre-to-centre gap (px)
+
+  // ── Arc-spread algorithm: push overlapping balls apart along the arc ──
+  // All balls share the same radius R; only their angle is adjusted.
+  // Iteratively nudge adjacent pairs until no two balls overlap.
+  const dThetaMin = 2 * Math.asin(BALL_MIN_DIST / (2 * R)); // minimum angular gap
+  const spreadAngles = {};
+  appData.markets.forEach(m => { spreadAngles[m.id] = marketAngles[m.id] || Math.PI * 0.5; });
+
+  const ARC_LO = Math.PI * 0.10;
+  const ARC_HI = Math.PI * 0.97;
+  for (let iter = 0; iter < 500; iter++) {
+    const sorted = Object.entries(spreadAngles).sort((a, b) => a[1] - b[1]);
+    let moved = false;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const [idA, angA] = sorted[i];
+      const [idB, angB] = sorted[i + 1];
+      const diff = angB - angA;
+      if (diff < dThetaMin) {
+        const push = (dThetaMin - diff) / 2;
+        let newA = angA - push, newB = angB + push;
+        if (newA < ARC_LO) { newB += (ARC_LO - newA); newA = ARC_LO; }
+        if (newB > ARC_HI) { newA -= (newB - ARC_HI); newB = ARC_HI; }
+        spreadAngles[idA] = newA;
+        spreadAngles[idB] = newB;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
 
   // Draw strings first (behind balls)
   appData.markets.forEach(m => {
-    const angle = marketAngles[m.id] || Math.PI * 0.5;
+    const angle = spreadAngles[m.id];
     const col = stageColors[m.stage] || '#58a6ff';
     const bx = cx + R * Math.cos(angle);
     const by = cy + R * Math.sin(angle);
@@ -1810,7 +1840,7 @@ function drawPendulum() {
 
   // Draw balls on top of strings
   appData.markets.forEach(m => {
-    const angle = marketAngles[m.id] || Math.PI * 0.5;
+    const angle = spreadAngles[m.id];
     const col = stageColors[m.stage] || '#58a6ff';
     const bx = cx + R * Math.cos(angle);
     const by = cy + R * Math.sin(angle);
