@@ -1353,25 +1353,6 @@ function renderCards() {
           <span class="metric-value ${peClass === 'high' ? 'down' : peClass === 'low' ? 'up' : 'warn'}">${m.ttmPE.toFixed(1)}×</span>
         </div>
       </div>
-      ${m.id === 'us' && fgiStr !== null ? `
-      <div class="fgi-bar-wrap">
-        <div class="fgi-bar-header">
-          <span class="fgi-bar-label">恐贪指数</span>
-          <span class="fgi-bar-range">最低 0 — 最高 100</span>
-        </div>
-        <div class="fgi-bar-track">
-          <div class="fgi-bar-fill" style="width:${m.fgi}%"></div>
-          <div class="fgi-bar-marker" style="left:${m.fgi}%"></div>
-        </div>
-        <div class="fgi-bar-labels">
-          <span class="fgi-zone fgi-extreme-fear">0 极度恐慷</span>
-          <span class="fgi-zone fgi-fear">25 恐慷</span>
-          <span class="fgi-zone fgi-neutral">50 中性</span>
-          <span class="fgi-zone fgi-greed">75 贪婪</span>
-          <span class="fgi-zone fgi-extreme-greed">100</span>
-        </div>
-        <div class="fgi-current-label" style="left:${Math.min(Math.max(m.fgi, 4), 92)}%">当前 ${m.fgi}</div>
-      </div>` : ''}
       <div class="pe-compare">
         <div class="pe-compare-title">
           PE 对比
@@ -1404,6 +1385,25 @@ function renderCards() {
           <sup>¹</sup> <strong style="color:var(--text-muted);">PE口径</strong>：采用<strong style="color:var(--text-muted);">中证指数公司官方TTM PE</strong>（动态市盈率），计算方式为指数总市值 ÷ 成分股TTM净利润合计（汇总法）。当前32×。
           另一常用口径：理杏仁市值加权PE（剔除亏损股）≈ 36×。两种口径均显著高于整体A股约10×。
         </p>
+      </div>` : ''}
+      \${m.id === 'us' && fgiStr !== null ? `
+      <div class="fgi-bar-wrap">
+        <div class="fgi-bar-header">
+          <span class="fgi-bar-label">恐贪指数</span>
+          <span class="fgi-bar-range">最低 0 — 最高 100</span>
+        </div>
+        <div class="fgi-bar-track">
+          <div class="fgi-bar-fill" style="width:\${m.fgi}%"></div>
+          <div class="fgi-bar-marker" style="left:\${m.fgi}%"></div>
+        </div>
+        <div class="fgi-bar-labels">
+          <span class="fgi-zone fgi-extreme-fear">0 极度恐慌</span>
+          <span class="fgi-zone fgi-fear">25 恐慌</span>
+          <span class="fgi-zone fgi-neutral">50 中性</span>
+          <span class="fgi-zone fgi-greed">75 贪婪</span>
+          <span class="fgi-zone fgi-extreme-greed">100</span>
+        </div>
+        <div class="fgi-current-label" style="left:\${Math.min(Math.max(m.fgi, 4), 92)}%">当前 \${m.fgi}</div>
       </div>` : ''}
       <div class="card-footer">
         <span class="posture-label">建议姿态</span>
