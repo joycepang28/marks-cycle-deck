@@ -1420,15 +1420,15 @@ function renderCards() {
           另一常用口径：理杏仁市值加权PE（剔除亏损股）≈ 36×。两种口径均显著高于整体A股约10×。
         </p>
       </div>` : ''}
-      \${m.id === 'us' && fgiStr !== null ? `
+      ${m.id === 'us' && fgiStr !== null ? `
       <div class="fgi-bar-wrap">
         <div class="fgi-bar-header">
           <span class="fgi-bar-label">恐贪指数</span>
           <span class="fgi-bar-range">最低 0 — 最高 100</span>
         </div>
         <div class="fgi-bar-track">
-          <div class="fgi-bar-fill" style="width:\${m.fgi}%"></div>
-          <div class="fgi-bar-marker" style="left:\${m.fgi}%"></div>
+          <div class="fgi-bar-fill" style="width:${m.fgi}%"></div>
+          <div class="fgi-bar-marker" style="left:${m.fgi}%"></div>
         </div>
         <div class="fgi-bar-labels">
           <span class="fgi-zone fgi-extreme-fear">0 极度恐慌</span>
@@ -1437,16 +1437,16 @@ function renderCards() {
           <span class="fgi-zone fgi-greed">75 贪婪</span>
           <span class="fgi-zone fgi-extreme-greed">100</span>
         </div>
-        <div class="fgi-current-label" style="left:\${Math.min(Math.max(m.fgi, 4), 92)}%">当前 \${m.fgi}</div>
-      \${(m.id === 'hk' || m.id === 'jp') && m.vix != null ? `
+        <div class="fgi-current-label" style="left:${Math.min(Math.max(m.fgi, 4), 92)}%">当前 ${m.fgi}</div>
+      </div>` : ''}
+      ${(m.id === 'hk' || m.id === 'jp') && m.vix != null ? `
       <div class="fgi-bar-wrap">
         <div class="fgi-bar-header">
-          <span class="fgi-bar-label">\${m.id === 'hk' ? 'VHSI 波动率指数' : 'NKVI 波动率指数'}</span>
+          <span class="fgi-bar-label">${m.id === 'hk' ? 'VHSI 波动率指数' : 'NKVI 波动率指数'}</span>
           <span class="fgi-bar-range">低 10 — 高 60</span>
         </div>
         <div class="vix-bar-track">
-          <div class="fgi-bar-fill" style="display:none"></div>
-          <div class="vix-bar-marker" style="left:\${Math.min(Math.max((m.vix - 10) / 50 * 100, 2), 96).toFixed(1)}%"></div>
+          <div class="vix-bar-marker" style="left:${Math.min(Math.max((m.vix - 10) / 50 * 100, 2), 96).toFixed(1)}%"></div>
         </div>
         <div class="fgi-bar-labels">
           <span class="vix-zone-calm">10 平静</span>
@@ -1454,7 +1454,7 @@ function renderCards() {
           <span class="vix-zone-elevated">40 紧张</span>
           <span class="vix-zone-panic">60 恐慌</span>
         </div>
-        <div class="fgi-current-label" style="left:\${Math.min(Math.max((m.vix - 10) / 50 * 100, 4), 92).toFixed(1)}%">当前 \${m.vix.toFixed(1)}</div>
+        <div class="fgi-current-label" style="left:${Math.min(Math.max((m.vix - 10) / 50 * 100, 4), 92).toFixed(1)}%">当前 ${m.vix.toFixed(1)}</div>
       </div>` : ''}
       <div class="card-footer">
         <span class="posture-label">建议姿态</span>
