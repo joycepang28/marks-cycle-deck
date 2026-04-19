@@ -1576,7 +1576,13 @@ function renderTable() {
       <td>${m.ttmPE.toFixed(1)}×</td>
       <td style="color:var(--text-muted)">${m.pe5y ? m.pe5y.toFixed(1) + '×' : '—'}</td>
       <td style="color:var(--text-muted)">${m.pe10y ? m.pe10y.toFixed(1) + '×' : '—'}</td>
-      <td>${(m.id === 'us' || m.id === 'sg') && m.fgi != null ? m.fgi + (m.id === 'sg' ? ' RSI' : '') : '—'}</td>
+      <td>${
+        m.id === 'us' && m.fgi != null ? m.fgi + ' FGI' :
+        (m.id === 'sg' || m.id === 'my' || m.id === 'cn') && m.fgi != null ? m.fgi + ' RSI' :
+        m.id === 'hk' && m.vix != null ? 'VHSI ' + m.vix.toFixed(1) :
+        m.id === 'jp' && m.vix != null ? 'NKVI ' + m.vix.toFixed(1) :
+        '—'
+      }</td>
       <td style="color:var(--text-muted)">${m.stageLabel}</td>
       <td style="font-weight:700;cursor:pointer;${stageColors[m.stage] || ''}" onclick="openPosturePopup('${m.id}')" title="点击查看详细分析">${m.postureLabel} <span style="font-size:0.75em;opacity:0.6">ⓘ</span></td>
     </tr>`).join('');
@@ -2006,9 +2012,12 @@ function openModal() {
           <label class="form-label">TTM PE (倍)</label>
           <input type="number" step="0.1" class="form-input" id="f_${m.id}_ttmPE" value="${m.ttmPE}" />
         </div>
-        ${(m.id === 'us' || m.id === 'sg') ? `<div class="form-group">
-          <label class="form-label">${m.id === 'sg' ? 'RSI 动量 (0–100)' : '恐贪指数 (0–100)'}</label>
-          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="${m.id === 'sg' ? '如 66' : '如 27'}" />
+        ${m.id === 'us' ? `<div class="form-group">
+          <label class="form-label">恐贪指数 (0–100)</label>
+          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="如 27" />
+        </div>` : (m.id === 'sg' || m.id === 'my' || m.id === 'cn') ? `<div class="form-group">
+          <label class="form-label">RSI(14) 动量 (0–100)</label>
+          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="如 ${m.id === 'sg' ? '66' : m.id === 'my' ? '53' : '67'}" />
         </div>` : '<div class="form-group"></div>'}
       </div>
       <div class="form-row">
