@@ -969,7 +969,7 @@
             <th>TTM PE</th>
             <th>5年均PE</th>
             <th>10年均PE</th>
-            <th>恐贪指数（美股）</th>
+            <th>情绪指数</th>
             <th>周期阶段</th>
             <th>建议姿态</th>
           </tr>
@@ -1149,7 +1149,7 @@ const DEFAULT_DATA = {
       pe5y: 13.74,
       pe10y: 13.32,
       cape: null,
-      fgi: null,
+      fgi: 66,
       moomooUrl: 'https://www.moomoo.com/sg/market/index-list/sg-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5ESTI/',
       stage: 2,
@@ -1420,10 +1420,10 @@ function renderCards() {
           另一常用口径：理杏仁市值加权PE（剔除亏损股）≈ 36×。两种口径均显著高于整体A股约10×。
         </p>
       </div>` : ''}
-      ${m.id === 'us' && fgiStr !== null ? `
+      ${(m.id === 'us' || m.id === 'sg') && fgiStr !== null ? `
       <div class="fgi-bar-wrap">
         <div class="fgi-bar-header">
-          <span class="fgi-bar-label">恐贪指数</span>
+          <span class="fgi-bar-label">${m.id === 'sg' ? '价格动量（RSI 14）' : '恐贪指数'}</span>
           <span class="fgi-bar-range">最低 0 — 最高 100</span>
         </div>
         <div class="fgi-bar-track">
@@ -1431,11 +1431,11 @@ function renderCards() {
           <div class="fgi-bar-marker" style="left:${m.fgi}%"></div>
         </div>
         <div class="fgi-bar-labels">
-          <span class="fgi-zone fgi-extreme-fear">0 极度恐慌</span>
-          <span class="fgi-zone fgi-fear">25 恐慌</span>
+          <span class="fgi-zone fgi-extreme-fear">${m.id === 'sg' ? '0 超卖' : '0 极度恐慌'}</span>
+          <span class="fgi-zone fgi-fear">25</span>
           <span class="fgi-zone fgi-neutral">50 中性</span>
-          <span class="fgi-zone fgi-greed">75 贪婪</span>
-          <span class="fgi-zone fgi-extreme-greed">100</span>
+          <span class="fgi-zone fgi-greed">75</span>
+          <span class="fgi-zone fgi-extreme-greed">${m.id === 'sg' ? '100 超买' : '100'}</span>
         </div>
         <div class="fgi-current-label" style="left:${Math.min(Math.max(m.fgi, 4), 92)}%">当前 ${m.fgi}</div>
       </div>` : ''}
@@ -1599,7 +1599,7 @@ function renderTable() {
       <td>${m.ttmPE.toFixed(1)}×</td>
       <td style="color:var(--text-muted)">${m.pe5y ? m.pe5y.toFixed(1) + '×' : '—'}</td>
       <td style="color:var(--text-muted)">${m.pe10y ? m.pe10y.toFixed(1) + '×' : '—'}</td>
-      <td>${m.id === 'us' && m.fgi != null ? m.fgi : '—'}</td>
+      <td>${(m.id === 'us' || m.id === 'sg') && m.fgi != null ? m.fgi + (m.id === 'sg' ? ' RSI' : '') : '—'}</td>
       <td style="color:var(--text-muted)">${m.stageLabel}</td>
       <td style="font-weight:700;cursor:pointer;${stageColors[m.stage] || ''}" onclick="openPosturePopup('${m.id}')" title="点击查看详细分析">${m.postureLabel} <span style="font-size:0.75em;opacity:0.6">ⓘ</span></td>
     </tr>`).join('');
@@ -2029,9 +2029,9 @@ function openModal() {
           <label class="form-label">TTM PE (倍)</label>
           <input type="number" step="0.1" class="form-input" id="f_${m.id}_ttmPE" value="${m.ttmPE}" />
         </div>
-        ${m.id === 'us' ? `<div class="form-group">
-          <label class="form-label">恐贪指数 (0–100)</label>
-          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="如 27" />
+        ${(m.id === 'us' || m.id === 'sg') ? `<div class="form-group">
+          <label class="form-label">${m.id === 'sg' ? 'RSI 动量 (0–100)' : '恐贪指数 (0–100)'}</label>
+          <input type="number" step="1" min="0" max="100" class="form-input" id="f_${m.id}_cape" value="${m.fgi || ''}" placeholder="${m.id === 'sg' ? '如 66' : '如 27'}" />
         </div>` : '<div class="form-group"></div>'}
       </div>
       <div class="form-row">
@@ -2100,8 +2100,8 @@ function saveData() {
     if (!isNaN(pe5yVal)) m.pe5y = pe5yVal;
     const pe10yVal = parseFloat(v('pe10y'));
     if (!isNaN(pe10yVal)) m.pe10y = pe10yVal;
-    // 恐贪指数只对美股有效，存入 fgi字段
-    if (m.id === 'us') {
+    // 情绪指数：美股=恐贪，新加坡=RSI动量，均存入 fgi字段
+    if (m.id === 'us' || m.id === 'sg') {
       const fgiVal = parseFloat(v('cape')); // input id仍用 cape，但存入 fgi
       if (!isNaN(fgiVal)) { m.fgi = fgiVal; m.cape = null; }
     }
