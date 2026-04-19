@@ -578,6 +578,38 @@
       white-space: nowrap;
     }
 
+    /* Volatility Index bar — HK/JP (reverse color: green=calm, red=panic) */
+    .vix-bar-track {
+      position: relative;
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(
+        to right,
+        #3fb950 0%,
+        #d29922 40%,
+        #d29922 60%,
+        #f85149 100%
+      );
+      overflow: visible;
+    }
+    .vix-bar-marker {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--surface);
+      box-shadow: 0 0 0 2px var(--text);
+      transition: left 0.8s cubic-bezier(0.16,1,0.3,1);
+      z-index: 2;
+    }
+    .vix-zone-calm         { color: #3fb950; }
+    .vix-zone-neutral      { color: var(--text-muted); }
+    .vix-zone-elevated     { color: #d29922; }
+    .vix-zone-panic        { color: #f85149; }
+
     /* PE Comparison — unified 3-row bar chart */
     .pe-compare {
       margin-top: var(--space-3);
@@ -1111,6 +1143,7 @@ const DEFAULT_DATA = {
       pe10y: 15.32,
       cape: null,
       fgi: null,
+      vix: 20.89,
       moomooUrl: 'https://www.moomoo.com/hk/market/index-list/hk-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EHSI/',
       stage: 1,
@@ -1132,6 +1165,7 @@ const DEFAULT_DATA = {
       pe10y: 14.34,
       cape: null,
       fgi: null,
+      vix: 28.4,
       moomooUrl: 'https://www.moomoo.com/jp/market/index-list/jp-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EN225/',
       stage: 2,
@@ -1202,7 +1236,7 @@ function loadData() {
           const idx = merged.markets.findIndex(m => m.id === savedMarket.id);
           if (idx !== -1) {
             // 只覆盖数值字段，保留DEFAULT_DATA中的文字/结构字段
-            const numericFields = ['level','ytd','ttmPE','pe5y','pe10y','cape','fgi','stage'];
+            const numericFields = ['level','ytd','ttmPE','pe5y','pe10y','cape','fgi','vix','stage'];
             numericFields.forEach(f => {
               if (savedMarket[f] !== undefined) merged.markets[idx][f] = savedMarket[f];
             });
@@ -1376,6 +1410,23 @@ function renderCards() {
           <span class="fgi-zone fgi-extreme-greed">100</span>
         </div>
         <div class="fgi-current-label" style="left:\${Math.min(Math.max(m.fgi, 4), 92)}%">当前 \${m.fgi}</div>
+      \${(m.id === 'hk' || m.id === 'jp') && m.vix != null ? `
+      <div class="fgi-bar-wrap">
+        <div class="fgi-bar-header">
+          <span class="fgi-bar-label">\${m.id === 'hk' ? 'VHSI 波动率指数' : 'NKVI 波动率指数'}</span>
+          <span class="fgi-bar-range">低 10 — 高 60</span>
+        </div>
+        <div class="vix-bar-track">
+          <div class="fgi-bar-fill" style="display:none"></div>
+          <div class="vix-bar-marker" style="left:\${Math.min(Math.max((m.vix - 10) / 50 * 100, 2), 96).toFixed(1)}%"></div>
+        </div>
+        <div class="fgi-bar-labels">
+          <span class="vix-zone-calm">10 平静</span>
+          <span class="vix-zone-neutral">25 正常</span>
+          <span class="vix-zone-elevated">40 紧张</span>
+          <span class="vix-zone-panic">60 恐慌</span>
+        </div>
+        <div class="fgi-current-label" style="left:\${Math.min(Math.max((m.vix - 10) / 50 * 100, 4), 92).toFixed(1)}%">当前 \${m.vix.toFixed(1)}</div>
       </div>` : ''}
       <div class="card-footer">
         <span class="posture-label">建议姿态</span>

@@ -250,6 +250,32 @@ def fetch_fng():
         print(f"  Warning Fear & Greed: {e}")
     return None
 
+
+def fetch_vhsi():
+    """Fetch HSI Volatility Index (VHSI) from CNBC quote page."""
+    try:
+        raw = get("https://www.cnbc.com/quotes/VHSI")
+        m = re.search(r'"last":"?(\d+\.?\d*)"?', raw)
+        if m:
+            return float(m.group(1))
+    except Exception as e:
+        print(f"  Warning VHSI: {e}")
+    return None
+
+
+def fetch_nkvi():
+    """Fetch Nikkei Average Volatility Index (^NKVI.OS) via yfinance."""
+    try:
+        import yfinance as yf
+        t = yf.Ticker("^NKVI.OS")
+        info = t.fast_info
+        val = info.last_price
+        if val and val > 0:
+            return round(float(val), 2)
+    except Exception as e:
+        print(f"  Warning NKVI: {e}")
+    return None
+
 # ---------------------------------------------
 # 8. Patch index.html DEFAULT_DATA in-place
 # ---------------------------------------------
@@ -423,7 +449,25 @@ def main():
     else:
         print("  -- FGI: no data")
 
-    # -- Step 7: Update date --
+    # -- Step 7: Volatility Indices (VHSI / NKVI) --
+    print("\nVolatility indices...")
+    vhsi = fetch_vhsi()
+    if vhsi is not None:
+        html, ok = patch_field(html, "hk", "vix", round(vhsi, 2))
+        if ok: print(f"  OK hk VHSI   = {vhsi:.2f}")
+        changes += ok
+    else:
+        print("  -- VHSI: no data")
+
+    nkvi = fetch_nkvi()
+    if nkvi is not None:
+        html, ok = patch_field(html, "jp", "vix", round(nkvi, 2))
+        if ok: print(f"  OK jp NKVI   = {nkvi:.2f}")
+        changes += ok
+    else:
+        print("  -- NKVI: no data")
+
+    # -- Step 8: Update date --
     html = patch_update_date(html, today)
     print(f"\nDate -> {today}")
 
