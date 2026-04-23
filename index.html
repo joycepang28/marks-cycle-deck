@@ -1046,8 +1046,9 @@
     <!-- Tab 2: Auto Fetch -->
     <div class="modal-tab-pane" id="pane-auto">
       <div class="fetch-src-links">
-        <strong style="color:var(--text)">指数点位自动获取：</strong>
-        <a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a>
+        <strong style="color:var(--text)">数据来源：</strong>
+        <a href="https://github.com/joycepang28/marks-cycle-deck/blob/main/market_data.json" target="_blank">GitHub market_data.json</a>
+        <span style="opacity:0.5">（每周一自动更新）</span>
         <span style="opacity:0.5">|</span>
         <strong style="color:var(--text)">可在 Moomoo 核对：</strong>
         <a href="https://www.moomoo.com/us/market/index-list/us-index" target="_blank">🇺🇸 US</a>
@@ -1092,20 +1093,20 @@
 <script>
 // ── Data Store ────────────────────────────────────────────────────
 const DEFAULT_DATA = {
-  updateDate: '2026-04-20',
+  updateDate: '2026-04-23',
   markets: [
     {
       id: 'us',
       flag: '🇺🇸',
       name: '美国',
       index: 'S&P 500',
-      level: 7126,
+      level: 7130,
       ytd: 3.9,
-      ttmPE: 27.09,
+      ttmPE: 27.13,
       pe5y: 22.97,
       pe10y: 19.94,
-      cape: 40.44,
-      fgi: 29,
+      cape: 40.5,
+      fgi: 46,
       moomooUrl: 'https://www.moomoo.com/us/market/index-list/us-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EGSPC/',
       stage: 3,           // 1, 2, or 3
@@ -1120,13 +1121,13 @@ const DEFAULT_DATA = {
       flag: '🇸🇬',
       name: '新加坡',
       index: 'STI',
-      level: 5005,
-      ytd: 7.5,
-      ttmPE: 16.13,
+      level: 4944,
+      ytd: 7.3,
+      ttmPE: 15.91,
       pe5y: 13.74,
       pe10y: 13.32,
       cape: null,
-      fgi: 66,
+      fgi: 49,
       moomooUrl: 'https://www.moomoo.com/sg/market/index-list/sg-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5ESTI/',
       stage: 2,
@@ -1141,14 +1142,14 @@ const DEFAULT_DATA = {
       flag: '🇭🇰',
       name: '香港',
       index: '恒指',
-      level: 26376,
-      ytd: 0.1,
-      ttmPE: 17.75,
+      level: 25915,
+      ytd: -0.7,
+      ttmPE: 17.78,
       pe5y: 15.46,
       pe10y: 15.32,
       cape: null,
       fgi: null,
-      vix: 21.66,
+      vix: 21.14,
       moomooUrl: 'https://www.moomoo.com/hk/market/index-list/hk-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EHSI/',
       stage: 2,
@@ -1163,14 +1164,14 @@ const DEFAULT_DATA = {
       flag: '🇯🇵',
       name: '日本',
       index: '日经225',
-      level: 59000,
-      ytd: 13.8,
-      ttmPE: 17.46,
+      level: 59140,
+      ytd: 12.8,
+      ttmPE: 16.99,
       pe5y: 14.84,
       pe10y: 14.34,
       cape: null,
       fgi: null,
-      vix: 33.15,
+      vix: 27.12,
       moomooUrl: 'https://www.moomoo.com/jp/market/index-list/jp-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EN225/',
       stage: 2,
@@ -1185,13 +1186,13 @@ const DEFAULT_DATA = {
       flag: '🇲🇾',
       name: '马来西亚',
       index: 'FBM KLCI',
-      level: 1701,
+      level: 1722,
       ytd: 1.5,
-      ttmPE: 15.29,
+      ttmPE: 15.3,
       pe5y: 14.39,
       pe10y: 15.09,
       cape: null,
-      fgi: 53,
+      fgi: 61,
       moomooUrl: 'https://www.moomoo.com/my/market/index-list/my-index',
       yahooUrl:  'https://finance.yahoo.com/quote/%5EKLCI/',
       stage: 2,
@@ -1206,13 +1207,13 @@ const DEFAULT_DATA = {
       flag: '🇨🇳',
       name: '中国A股',
       index: '中证500',
-      level: 8300,
-      ytd: 8.5,
-      ttmPE: 32.18,
-      pe5y: 21.65,
-      pe10y: 25.62,
+      level: 8295,
+      ytd: 7.4,
+      ttmPE: 32.5,
+      pe5y: 21.86,
+      pe10y: 25.82,
       cape: null,
-      fgi: 67,
+      fgi: 78,
       moomooUrl: 'https://www.moomoo.com/hk/market/index-list/cn-index',
       yahooUrl:  'https://finance.yahoo.com/quote/000905.SS/',
       stage: 2,
@@ -1938,39 +1939,17 @@ function setFetchStatus(state, msg) {
 // Small delay helper to prevent rate-limiting on allorigins.win
 const _sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function fetchYahoo(ticker, attempt = 0) {
-  // Use Yahoo Finance v8 spark endpoint — lighter and faster than chart endpoint
-  // Proxied through allorigins.win (free CORS proxy); retry with /get if /raw times out
-  const spkUrl = `https://query2.finance.yahoo.com/v8/finance/spark?symbols=${encodeURIComponent(ticker)}&range=ytd&interval=1d`;
-  const strategies = [
-    { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(spkUrl)}`, wrapped: false },
-    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(spkUrl)}`, wrapped: true },
-  ];
+// ── GitHub raw JSON fetch (replaces allorigins.win / Yahoo Finance direct) ──
+// Fetches market_data.json committed weekly by GitHub Actions
+// URL: https://raw.githubusercontent.com/joycepang28/marks-cycle-deck/main/market_data.json
+const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/joycepang28/marks-cycle-deck/main/market_data.json';
 
-  if (attempt > 0) await _sleep(1500 * attempt); // exponential backoff on retry
-
-  for (const s of strategies) {
-    try {
-      const res = await fetch(s.url, { signal: AbortSignal.timeout(18000) });
-      if (!res.ok) continue;
-      const raw = await res.text();
-      let parsed = JSON.parse(raw);
-      if (s.wrapped && parsed && parsed.contents) parsed = JSON.parse(parsed.contents);
-      const val = parsed && parsed[ticker];
-      if (val) {
-        const closes = (val.close || []).filter(v => v != null);
-        if (closes.length > 0) {
-          const lastClose  = closes[closes.length - 1];
-          const firstClose = closes[0];
-          const ytd = (firstClose > 0) ? ((lastClose - firstClose) / firstClose * 100) : null;
-          return { level: lastClose, ytd };
-        }
-      }
-    } catch(e) { continue; }
-  }
-  // Retry once with backoff before giving up
-  if (attempt < 2) return fetchYahoo(ticker, attempt + 1);
-  throw new Error('Failed to fetch');
+async function fetchFromGitHub() {
+  // Add cache-busting so browser always gets the latest committed version
+  const url = GITHUB_RAW_URL + '?t=' + Date.now();
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
 }
 
 async function startAutoFetch() {
@@ -1981,39 +1960,39 @@ async function startAutoFetch() {
   applyBtn.style.display = 'none';
   document.getElementById('fetchPreview').style.display = 'none';
   fetchedData = null;
-  setFetchStatus('loading', '正在从 Yahoo Finance 获取实时指数数据...');
+  setFetchStatus('loading', '正在从 GitHub 拉取最新市场数据...');
 
-  // Yahoo Finance tickers: ^GSPC=S&P500, ^STI=新加坡, ^HSI=恒指, ^N225=日经, ^KLSE=马来西亚KLCI
-  const tickers = { us: '^GSPC', sg: '^STI', hk: '^HSI', jp: '^N225', my: '^KLSE', cn: '000905.SS' };
-  const results = {};
-  const errors  = [];
-
-  // Sequential fetch with small stagger to avoid triggering allorigins.win rate limits
-  for (const m of appData.markets) {
-    try {
-      const ticker = tickers[m.id];
-      if (!ticker) continue;
-      setFetchStatus('loading', `正在获取 ${m.flag} ${m.name} 数据...`);
-      const r = await fetchYahoo(ticker);
-      results[m.id] = r;
-    } catch(e) {
-      errors.push(m.id.toUpperCase() + ': ' + e.message);
-    }
-    await _sleep(200); // brief pause between markets
+  let json;
+  try {
+    json = await fetchFromGitHub();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '重新获取';
+    setFetchStatus('error', '获取失败：' + e.message + '（请检查网络连接）');
+    return;
   }
 
   btn.disabled = false;
   btn.textContent = '重新获取';
 
-  if (Object.keys(results).length === 0) {
-    setFetchStatus('error', '获取失败：' + errors.join('; ') + '（请检查网络连接）');
+  if (!json || !json.markets) {
+    setFetchStatus('error', '数据格式错误，请稍后重试');
     return;
   }
 
-  fetchedData = results;
+  // json.markets is an object keyed by market id
+  const results = {};
+  appData.markets.forEach(m => {
+    const r = json.markets[m.id];
+    if (r) results[m.id] = r;
+  });
+
   const successCount = Object.keys(results).length;
-  const errMsg = errors.length ? ` （${errors.length}个失败: ${errors.join(', ')}）` : '';
-  setFetchStatus('success', `成功获取 ${successCount} 个市场数据${errMsg}`);
+  const dataDate = json.date || '未知';
+  setFetchStatus('success', `成功获取 ${successCount} 个市场数据（数据日期：${dataDate}）`);
+
+  fetchedData = results;
+  fetchedData._date = json.date || new Date().toISOString().slice(0, 10);
 
   const tbody = document.getElementById('fetchTableBody');
   tbody.innerHTML = appData.markets.map(m => {
@@ -2024,13 +2003,13 @@ async function startAutoFetch() {
         <td colspan="3" style="color:var(--bear)"><small>获取失败</small></td>
         <td style="color:var(--text-faint)">—</td>
       </tr>`;
-    const lvlChanged = Math.abs(r.level - m.level) > 0.5;
-    const ytdChanged = r.ytd !== null && Math.abs(r.ytd - m.ytd) > 0.05;
+    const lvlChanged = r.level != null && Math.abs(r.level - m.level) > 0.5;
+    const ytdChanged = r.ytd  != null && Math.abs(r.ytd  - m.ytd)   > 0.05;
     const lvlHtml = lvlChanged
-      ? `<span class="val-new">${r.level.toLocaleString(undefined,{maximumFractionDigits:1})}</span> <span class="val-old">${m.level.toLocaleString()}</span>`
+      ? `<span class="val-new">${Number(r.level).toLocaleString(undefined,{maximumFractionDigits:1})}</span> <span class="val-old">${m.level.toLocaleString()}</span>`
       : `<span class="val-unchanged">${m.level.toLocaleString()}</span>`;
-    const ytdHtml = (ytdChanged && r.ytd !== null)
-      ? `<span class="val-new">${r.ytd >= 0 ? '+' : ''}${r.ytd.toFixed(1)}%</span> <span class="val-old">${m.ytd >= 0 ? '+' : ''}${m.ytd.toFixed(1)}%</span>`
+    const ytdHtml = ytdChanged
+      ? `<span class="val-new">${r.ytd >= 0 ? '+' : ''}${Number(r.ytd).toFixed(1)}%</span> <span class="val-old">${m.ytd >= 0 ? '+' : ''}${m.ytd.toFixed(1)}%</span>`
       : `<span class="val-unchanged">${m.ytd >= 0 ? '+' : ''}${m.ytd.toFixed(1)}%</span>`;
     const statusIcon = (lvlChanged || ytdChanged)
       ? '<span style="color:var(--accent)">&#8593; 已更新</span>'
@@ -2051,14 +2030,19 @@ async function startAutoFetch() {
 
 function applyFetchedData() {
   if (!fetchedData) return;
+  // Apply all numeric fields from GitHub JSON (level, ytd, ttmPE, pe5y, pe10y, cape, fgi, vix, stage)
+  const numericFields = ['level','ytd','ttmPE','pe5y','pe10y','cape','fgi','vix','stage'];
   appData.markets.forEach(m => {
     const r = fetchedData[m.id];
     if (!r) return;
+    numericFields.forEach(field => {
+      if (r[field] !== undefined) m[field] = r[field];
+    });
     if (r.level) m.level = Math.round(r.level);
-    if (r.ytd !== null) m.ytd = parseFloat(r.ytd.toFixed(1));
   });
-  const today = new Date();
-  appData.updateDate = today.toISOString().slice(0, 10);
+  // Use the date from the JSON (data date), not today's browser date
+  const dataDate = (fetchedData._date) || new Date().toISOString().slice(0, 10);
+  appData.updateDate = dataDate;
   saveToStorage(appData);
   document.getElementById('lastUpdated').textContent = '更新: ' + appData.updateDate;
   document.getElementById('updateDate').textContent  = appData.updateDate;

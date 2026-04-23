@@ -396,6 +396,9 @@ def main():
     changes = 0
     all_markets = ["us", "sg", "hk", "jp", "my", "cn"]
 
+    # Collector for market_data.json
+    mdata = {m: {} for m in all_markets}
+
     # -- Step 1: Fetch current index levels --
     print("Index levels...")
 
@@ -590,6 +593,32 @@ def main():
 
     with open("fetch_summary.json", "w") as f:
         json.dump({"date": today, "fields_updated": changes}, f)
+
+    # -- Write market_data.json for frontend GitHub-raw fetch --
+    numeric_fields = ["level", "ytd", "ttmPE", "pe5y", "pe10y", "cape", "fgi", "vix", "stage"]
+    market_data_out = {"date": today, "markets": {}}
+    for mid in all_markets:
+        id_pat = re.compile(rf"id:\s*'{re.escape(mid)}'")
+        m = id_pat.search(html)
+        if not m:
+            continue
+        block_start = m.start()
+        block_end = html.find("\n    }", block_start) + 6
+        block = html[block_start:block_end]
+        entry = {}
+        for field in numeric_fields:
+            fp = re.search(rf"{re.escape(field)}:\s*([^,\n]+)", block)
+            if fp:
+                raw = fp.group(1).strip().rstrip(",")
+                try:
+                    entry[field] = float(raw) if "." in raw else (None if raw == "null" else int(raw))
+                except ValueError:
+                    pass
+        market_data_out["markets"][mid] = entry
+    with open("market_data.json", "w") as f:
+        json.dump(market_data_out, f, indent=2)
+    print(f"market_data.json written ({len(all_markets)} markets)")
+
 
 
 if __name__ == "__main__":

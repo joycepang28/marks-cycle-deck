@@ -1,0 +1,67 @@
+{
+  "date": "2026-04-23",
+  "markets": {
+    "us": {
+      "level": 7130,
+      "ytd": 3.9,
+      "ttmPE": 27.13,
+      "pe5y": 22.97,
+      "pe10y": 19.94,
+      "cape": 40.5,
+      "fgi": 46,
+      "stage": 3
+    },
+    "sg": {
+      "level": 4944,
+      "ytd": 7.3,
+      "ttmPE": 15.91,
+      "pe5y": 13.74,
+      "pe10y": 13.32,
+      "cape": null,
+      "fgi": 49,
+      "stage": 2
+    },
+    "hk": {
+      "level": 25915,
+      "ytd": -0.7,
+      "ttmPE": 17.78,
+      "pe5y": 15.46,
+      "pe10y": 15.32,
+      "cape": null,
+      "fgi": null,
+      "vix": 21.14,
+      "stage": 2
+    },
+    "jp": {
+      "level": 59140,
+      "ytd": 12.8,
+      "ttmPE": 16.99,
+      "pe5y": 14.84,
+      "pe10y": 14.34,
+      "cape": null,
+      "fgi": null,
+      "vix": 27.12,
+      "stage": 2
+    },
+    "my": {
+      "level": 1722,
+      "ytd": 1.5,
+      "ttmPE": 15.3,
+      "pe5y": 14.39,
+      "pe10y": 15.09,
+      "cape": null,
+      "fgi": 61,
+      "stage": 2
+    },
+    "cn": {
+      "level": 8295,
+      "ytd": 7.4,
+      "ttmPE": 32.5,
+      "pe5y": 21.86,
+      "pe10y": 25.82,
+      "cape": null,
+      "fgi": 78,
+      "stage": 2
+    }
+  }
+}
