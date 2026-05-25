@@ -1,66 +1,66 @@
 {
-  "date": "2026-05-18",
+  "date": "2026-05-25",
   "markets": {
     "us": {
-      "level": 7408,
+      "level": 7473,
       "ytd": 7.9,
-      "ttmPE": 27.0,
+      "ttmPE": 27.24,
       "pe5y": 23.08,
       "pe10y": 20.05,
-      "cape": 41.66,
-      "fgi": 28,
+      "cape": 42.04,
+      "fgi": 30,
       "stage": 3
     },
     "sg": {
-      "level": 4966,
+      "level": 5089,
       "ytd": 6.0,
-      "ttmPE": 16.1,
+      "ttmPE": 16.39,
       "pe5y": 13.77,
       "pe10y": 13.36,
       "cape": null,
-      "fgi": 64,
+      "fgi": 79,
       "stage": 2
     },
     "hk": {
-      "level": 25613,
+      "level": 25606,
       "ytd": -0.1,
-      "ttmPE": 18.42,
+      "ttmPE": 17.99,
       "pe5y": 15.47,
       "pe10y": 15.34,
       "cape": null,
       "fgi": null,
-      "vix": 21.32,
+      "vix": 18.81,
       "stage": 2
     },
     "jp": {
-      "level": 60958,
+      "level": 65301,
       "ytd": 14.8,
-      "ttmPE": 18.24,
+      "ttmPE": 18.35,
       "pe5y": 14.84,
       "pe10y": 14.4,
       "cape": null,
       "fgi": null,
-      "vix": 33.1,
+      "vix": 33.25,
       "stage": 2
     },
     "my": {
-      "level": 1734,
+      "level": 1711,
       "ytd": 1.5,
-      "ttmPE": 15.16,
+      "ttmPE": 14.92,
       "pe5y": 14.43,
       "pe10y": 15.09,
       "cape": null,
-      "fgi": 59,
+      "fgi": 27,
       "stage": 2
     },
     "cn": {
-      "level": 8579,
+      "level": 8671,
       "ytd": 9.1,
-      "ttmPE": 32.44,
-      "pe5y": 21.2,
-      "pe10y": 24.9,
+      "ttmPE": 32.6,
+      "pe5y": 21.26,
+      "pe10y": 24.92,
       "cape": null,
-      "fgi": 55,
+      "fgi": 57,
       "stage": 2
     }
   }
