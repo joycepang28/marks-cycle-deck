@@ -1,66 +1,66 @@
 {
-  "date": "2026-10-12",
+  "date": "2026-10-19",
   "markets": {
     "us": {
-      "level": 7812,
-      "ytd": 13.9,
-      "ttmPE": 24.35,
+      "level": 7659,
+      "ytd": 11.7,
+      "ttmPE": 23.87,
       "pe5y": 23.64,
       "pe10y": 20.54,
-      "cape": 41.87,
-      "fgi": 69,
+      "cape": 40.54,
+      "fgi": 59,
       "stage": 3
     },
     "sg": {
-      "level": 5418,
-      "ytd": 21.8,
-      "ttmPE": 18.79,
+      "level": 5422,
+      "ytd": 16.4,
+      "ttmPE": 18.63,
       "pe5y": 14.05,
       "pe10y": 13.55,
-      "cape": null,
-      "fgi": 23,
-      "stage": 2
-    },
-    "hk": {
-      "level": 24245,
-      "ytd": -5.5,
-      "ttmPE": 13.14,
-      "pe5y": 15.44,
-      "pe10y": 15.44,
-      "cape": null,
-      "fgi": null,
-      "vix": 18.14,
-      "stage": 2
-    },
-    "jp": {
-      "level": 69031,
-      "ytd": 33.2,
-      "ttmPE": 15.35,
-      "pe5y": 15.04,
-      "pe10y": 14.64,
-      "cape": null,
-      "fgi": null,
-      "vix": 30.14,
-      "stage": 2
-    },
-    "my": {
-      "level": 1617,
-      "ytd": 1.5,
-      "ttmPE": 12.84,
-      "pe5y": 14.44,
-      "pe10y": 15.01,
       "cape": null,
       "fgi": 22,
       "stage": 2
     },
-    "cn": {
-      "level": 7096,
-      "ytd": -7.3,
-      "ttmPE": 29.6,
-      "pe5y": 22.2,
-      "pe10y": 24.66,
+    "hk": {
+      "level": 24187,
+      "ytd": -8.2,
+      "ttmPE": 13.16,
+      "pe5y": 15.44,
+      "pe10y": 15.44,
       "cape": null,
-      "fgi": 34,
+      "fgi": null,
+      "vix": 18.29,
+      "stage": 2
+    },
+    "jp": {
+      "level": 64770,
+      "ytd": 25.0,
+      "ttmPE": 14.89,
+      "pe5y": 15.04,
+      "pe10y": 14.64,
+      "cape": null,
+      "fgi": null,
+      "vix": 34.91,
+      "stage": 2
+    },
+    "my": {
+      "level": 1595,
+      "ytd": 1.5,
+      "ttmPE": 12.77,
+      "pe5y": 14.44,
+      "pe10y": 15.01,
+      "cape": null,
+      "fgi": 30,
+      "stage": 2
+    },
+    "cn": {
+      "level": 6773,
+      "ytd": -11.5,
+      "ttmPE": 27.73,
+      "pe5y": 22.08,
+      "pe10y": 24.54,
+      "cape": null,
+      "fgi": 8,
       "stage": 2
     }
   }
